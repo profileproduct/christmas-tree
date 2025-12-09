@@ -7,8 +7,10 @@ import { UIOverlay } from './components/UIOverlay';
 import { GestureController } from './components/GestureController';
 import { TreeMode } from './types';
 
+import { Lightbox } from './components/Lightbox';
+
 // Simple Error Boundary to catch 3D resource loading errors (like textures)
-class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasError: boolean}> {
+class ErrorBoundary extends React.Component<{ children: React.ReactNode }, { hasError: boolean }> {
   constructor(props: any) {
     super(props);
     this.state = { hasError: false };
@@ -30,7 +32,7 @@ class ErrorBoundary extends React.Component<{children: React.ReactNode}, {hasErr
           <div>
             <h2 className="text-2xl mb-2">Something went wrong</h2>
             <p className="opacity-70">A resource failed to load (likely a missing image). Check the console for details.</p>
-            <button 
+            <button
               onClick={() => this.setState({ hasError: false })}
               className="mt-4 px-4 py-2 border border-[#D4AF37] hover:bg-[#D4AF37] hover:text-black transition-colors"
             >
@@ -49,6 +51,8 @@ export default function App() {
   const [mode, setMode] = useState<TreeMode>(TreeMode.FORMED);
   const [handPosition, setHandPosition] = useState<{ x: number; y: number; detected: boolean }>({ x: 0.5, y: 0.5, detected: false });
   const [uploadedPhotos, setUploadedPhotos] = useState<string[]>([]);
+  const [selectedPhoto, setSelectedPhoto] = useState<string | null>(null);
+  const [morphTrigger, setMorphTrigger] = useState<(() => void) | null>(null);
 
   const toggleMode = () => {
     setMode((prev) => (prev === TreeMode.FORMED ? TreeMode.CHAOS : TreeMode.FORMED));
@@ -63,7 +67,17 @@ export default function App() {
   };
 
   return (
-    <div className="w-full h-screen relative bg-gradient-to-b from-black via-[#001a0d] to-[#0a2f1e]">
+    <div
+      className="w-full h-[100dvh] md:h-screen relative overflow-hidden"
+      style={{
+        fontFamily: '"Inter", sans-serif',
+        background: '#040307',
+        backgroundImage: `
+            radial-gradient(circle at 50% 35%, #1d1431 0%, transparent 65%),
+            linear-gradient(180deg, #000000 0%, #070012 100%)
+        `
+      }}
+    >
       <ErrorBoundary>
         <Canvas
           dpr={[1, 2]}
@@ -72,20 +86,34 @@ export default function App() {
           shadows
         >
           <Suspense fallback={null}>
-            <Experience mode={mode} handPosition={handPosition} uploadedPhotos={uploadedPhotos} />
+            <Experience
+              mode={mode}
+              handPosition={handPosition}
+              uploadedPhotos={uploadedPhotos}
+              onSelectPhoto={setSelectedPhoto}
+              onMorphReady={(trigger) => setMorphTrigger(() => trigger)}
+            />
           </Suspense>
         </Canvas>
       </ErrorBoundary>
-      
-      <Loader 
-        containerStyles={{ background: '#000' }} 
+
+      <Loader
+        containerStyles={{ background: '#000' }}
         innerStyles={{ width: '300px', height: '10px', background: '#333' }}
         barStyles={{ background: '#D4AF37', height: '10px' }}
         dataStyles={{ color: '#D4AF37', fontFamily: 'Cinzel' }}
       />
-      
-      <UIOverlay mode={mode} onToggle={toggleMode} onPhotosUpload={handlePhotosUpload} hasPhotos={uploadedPhotos.length > 0} />
-      
+
+      <UIOverlay
+        mode={mode}
+        onToggle={toggleMode}
+        onPhotosUpload={handlePhotosUpload}
+        hasPhotos={uploadedPhotos.length > 0}
+        onMorph={morphTrigger}
+      />
+
+      <Lightbox photoUrl={selectedPhoto} onClose={() => setSelectedPhoto(null)} />
+
       {/* Gesture Control Module */}
       <GestureController currentMode={mode} onModeChange={setMode} onHandPosition={handleHandPosition} />
     </div>

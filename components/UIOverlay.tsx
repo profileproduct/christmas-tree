@@ -6,9 +6,10 @@ interface UIOverlayProps {
   onToggle: () => void;
   onPhotosUpload: (photos: string[]) => void;
   hasPhotos: boolean;
+  onMorph?: (() => void) | null;
 }
 
-export const UIOverlay: React.FC<UIOverlayProps> = ({ mode, onToggle, onPhotosUpload, hasPhotos }) => {
+export const UIOverlay: React.FC<UIOverlayProps> = ({ mode, onToggle, onPhotosUpload, hasPhotos, onMorph }) => {
   const isFormed = mode === TreeMode.FORMED;
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -46,17 +47,17 @@ export const UIOverlay: React.FC<UIOverlayProps> = ({ mode, onToggle, onPhotosUp
   };
 
   return (
-    <div className="absolute top-0 left-0 w-full h-full pointer-events-none flex flex-col justify-between p-8 z-10">
-      
+    <div className="absolute top-0 left-0 w-full h-full pointer-events-none flex flex-col justify-between p-4 md:p-8 z-10">
+
       {/* Header */}
-      <header className="flex flex-col items-center">
-        <h1 className="text-4xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#D4AF37] via-[#F5E6BF] to-[#D4AF37] font-serif drop-shadow-lg tracking-wider text-center">
+      <header className="flex flex-col items-center mt-4 md:mt-0">
+        <h1 className="text-3xl md:text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-[#D4AF37] via-[#F5E6BF] to-[#D4AF37] font-serif drop-shadow-lg tracking-wider text-center">
           Merry Christmas
         </h1>
-        
+
         {/* Upload Button - Only show when no photos uploaded */}
         {!hasPhotos && (
-          <div className="mt-6 pointer-events-auto">
+          <div className="mt-8 md:mt-6 pointer-events-auto">
             <input
               ref={fileInputRef}
               type="file"
@@ -67,11 +68,23 @@ export const UIOverlay: React.FC<UIOverlayProps> = ({ mode, onToggle, onPhotosUp
             />
             <button
               onClick={handleUploadClick}
-              className="group px-8 py-3 border-2 border-[#D4AF37] bg-black/50 backdrop-blur-md overflow-hidden transition-all duration-500 hover:shadow-[0_0_30px_#D4AF37] hover:border-[#fff] hover:bg-[#D4AF37]/20"
+              className="group px-6 py-2 md:px-8 md:py-3 border-2 border-[#D4AF37] bg-black/50 backdrop-blur-md overflow-hidden transition-all duration-500 hover:shadow-[0_0_30px_#D4AF37] hover:border-[#fff] hover:bg-[#D4AF37]/20"
             >
-              <span className="relative z-10 font-serif text-lg md:text-xl text-[#D4AF37] tracking-[0.1em] group-hover:text-white transition-colors">
+              <span className="relative z-10 font-serif text-base md:text-xl text-[#D4AF37] tracking-[0.1em] group-hover:text-white transition-colors">
                 上传照片
               </span>
+            </button>
+          </div>
+        )}
+
+        {/* Morph Button */}
+        {onMorph && (
+          <div className="mt-4 pointer-events-auto">
+            <button
+              onClick={onMorph}
+              className="px-6 py-2 rounded-full border border-white/20 bg-white/5 backdrop-blur-md text-white/90 hover:bg-white/15 hover:scale-105 transition-all duration-300 shadow-[0_8px_32px_0_rgba(0,0,0,0.37)]"
+            >
+              Morph Shape
             </button>
           </div>
         )}
@@ -102,10 +115,10 @@ export const UIOverlay: React.FC<UIOverlayProps> = ({ mode, onToggle, onPhotosUp
       </div> */}
 
       {/* Decorative Corners */}
-      <div className="absolute top-8 left-8 w-16 h-16 border-t-2 border-l-2 border-[#D4AF37] opacity-50"></div>
-      <div className="absolute top-8 right-8 w-16 h-16 border-t-2 border-r-2 border-[#D4AF37] opacity-50"></div>
-      <div className="absolute bottom-8 left-8 w-16 h-16 border-b-2 border-l-2 border-[#D4AF37] opacity-50"></div>
-      <div className="absolute bottom-8 right-8 w-16 h-16 border-b-2 border-r-2 border-[#D4AF37] opacity-50"></div>
+      <div className="absolute top-4 left-4 md:top-8 md:left-8 w-12 h-12 md:w-16 md:h-16 border-t-2 border-l-2 border-[#D4AF37] opacity-50"></div>
+      <div className="absolute top-4 right-4 md:top-8 md:right-8 w-12 h-12 md:w-16 md:h-16 border-t-2 border-r-2 border-[#D4AF37] opacity-50"></div>
+      <div className="absolute bottom-4 left-4 md:bottom-8 md:left-8 w-12 h-12 md:w-16 md:h-16 border-b-2 border-l-2 border-[#D4AF37] opacity-50"></div>
+      <div className="absolute bottom-4 right-4 md:bottom-8 md:right-8 w-12 h-12 md:w-16 md:h-16 border-b-2 border-r-2 border-[#D4AF37] opacity-50"></div>
     </div>
   );
 };

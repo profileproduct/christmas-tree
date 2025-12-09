@@ -27,6 +27,7 @@ const PHOTO_COUNT = 22; // How many polaroid frames to generate
 interface PolaroidsProps {
   mode: TreeMode;
   uploadedPhotos: string[];
+  onSelectPhoto: (url: string) => void;
 }
 
 interface PhotoData {
@@ -37,7 +38,7 @@ interface PhotoData {
   speed: number;
 }
 
-const PolaroidItem: React.FC<{ data: PhotoData; mode: TreeMode; index: number }> = ({ data, mode, index }) => {
+const PolaroidItem: React.FC<{ data: PhotoData; mode: TreeMode; index: number; onSelectPhoto: (url: string) => void }> = ({ data, mode, index, onSelectPhoto }) => {
   const groupRef = useRef<THREE.Group>(null);
   const [texture, setTexture] = useState<THREE.Texture | null>(null);
   const [error, setError] = useState(false);
@@ -59,7 +60,7 @@ const PolaroidItem: React.FC<{ data: PhotoData; mode: TreeMode; index: number }>
       }
     );
   }, [data.url]);
-  
+
   // Random sway offset
   const swayOffset = useMemo(() => Math.random() * 100, []);
 
@@ -68,67 +69,75 @@ const PolaroidItem: React.FC<{ data: PhotoData; mode: TreeMode; index: number }>
 
     const isFormed = mode === TreeMode.FORMED;
     const time = state.clock.elapsedTime;
-    
+
     // 1. Position Interpolation
     const targetPos = isFormed ? data.targetPos : data.chaosPos;
     const step = delta * data.speed;
-    
+
     // Smooth lerp to target position
     groupRef.current.position.lerp(targetPos, step);
 
     // 2. Rotation & Sway Logic
     if (isFormed) {
-        // Look at center but face outward
-        const dummy = new THREE.Object3D();
-        dummy.position.copy(groupRef.current.position);
-        dummy.lookAt(0, groupRef.current.position.y, 0); 
-        dummy.rotateY(Math.PI); // Flip to face out
-        
-        // Base rotation alignment
-        groupRef.current.quaternion.slerp(dummy.quaternion, step);
-        
-        // Physical Swaying (Wind)
-        // Z-axis rotation for side-to-side swing
-        const swayAngle = Math.sin(time * 2.0 + swayOffset) * 0.08;
-        // X-axis rotation for slight front-back tilt
-        const tiltAngle = Math.cos(time * 1.5 + swayOffset) * 0.05;
-        
-        groupRef.current.rotateZ(swayAngle * delta * 5); // Apply over time or directly? 
-        // For stable sway, we add to the base rotation calculated above.
-        // But since we slerp quaternion, let's just add manual rotation after slerp?
-        // Easier: Set rotation directly based on dummy + sway.
-        
-        // Calculate the "perfect" rotation
-        const currentRot = new THREE.Euler().setFromQuaternion(groupRef.current.quaternion);
-        groupRef.current.rotation.z = currentRot.z + swayAngle * 0.05; 
-        groupRef.current.rotation.x = currentRot.x + tiltAngle * 0.05;
-        
+      // Look at center but face outward
+      const dummy = new THREE.Object3D();
+      dummy.position.copy(groupRef.current.position);
+      dummy.lookAt(0, groupRef.current.position.y, 0);
+      dummy.rotateY(Math.PI); // Flip to face out
+
+      // Base rotation alignment
+      groupRef.current.quaternion.slerp(dummy.quaternion, step);
+
+      // Physical Swaying (Wind)
+      // Z-axis rotation for side-to-side swing
+      const swayAngle = Math.sin(time * 2.0 + swayOffset) * 0.08;
+      // X-axis rotation for slight front-back tilt
+      const tiltAngle = Math.cos(time * 1.5 + swayOffset) * 0.05;
+
+      groupRef.current.rotateZ(swayAngle * delta * 5); // Apply over time or directly? 
+      // For stable sway, we add to the base rotation calculated above.
+      // But since we slerp quaternion, let's just add manual rotation after slerp?
+      // Easier: Set rotation directly based on dummy + sway.
+
+      // Calculate the "perfect" rotation
+      const currentRot = new THREE.Euler().setFromQuaternion(groupRef.current.quaternion);
+      groupRef.current.rotation.z = currentRot.z + swayAngle * 0.05;
+      groupRef.current.rotation.x = currentRot.x + tiltAngle * 0.05;
+
     } else {
-        // Chaos mode - face toward camera with gentle floating
-        // Camera position relative to scene group: [0, 9, 20]
-        const cameraPos = new THREE.Vector3(0, 9, 20);
-        const dummy = new THREE.Object3D();
-        dummy.position.copy(groupRef.current.position);
-        
-        // Make photos face the camera
-        dummy.lookAt(cameraPos);
-        
-        // Smoothly rotate to face camera
-        groupRef.current.quaternion.slerp(dummy.quaternion, delta * 3);
-        
-        // Add gentle floating wobble
-        const wobbleX = Math.sin(time * 1.5 + swayOffset) * 0.03;
-        const wobbleZ = Math.cos(time * 1.2 + swayOffset) * 0.03;
-        
-        const currentRot = new THREE.Euler().setFromQuaternion(groupRef.current.quaternion);
-        groupRef.current.rotation.x = currentRot.x + wobbleX;
-        groupRef.current.rotation.z = currentRot.z + wobbleZ;
+      // Chaos mode - face toward camera with gentle floating
+      // Camera position relative to scene group: [0, 9, 20]
+      const cameraPos = new THREE.Vector3(0, 9, 20);
+      const dummy = new THREE.Object3D();
+      dummy.position.copy(groupRef.current.position);
+
+      // Make photos face the camera
+      dummy.lookAt(cameraPos);
+
+      // Smoothly rotate to face camera
+      groupRef.current.quaternion.slerp(dummy.quaternion, delta * 3);
+
+      // Add gentle floating wobble
+      const wobbleX = Math.sin(time * 1.5 + swayOffset) * 0.03;
+      const wobbleZ = Math.cos(time * 1.2 + swayOffset) * 0.03;
+
+      const currentRot = new THREE.Euler().setFromQuaternion(groupRef.current.quaternion);
+      groupRef.current.rotation.x = currentRot.x + wobbleX;
+      groupRef.current.rotation.z = currentRot.z + wobbleZ;
     }
   });
 
   return (
-    <group ref={groupRef}>
-      
+    <group
+      ref={groupRef}
+      onClick={(e) => {
+        e.stopPropagation();
+        onSelectPhoto(data.url);
+      }}
+      onPointerOver={() => { document.body.style.cursor = 'pointer'; }}
+      onPointerOut={() => { document.body.style.cursor = 'auto'; }}
+    >
+
       {/* The Hanging String (Visual only) - fades out at top */}
       <mesh position={[0, 1.2, -0.1]}>
         <cylinderGeometry args={[0.005, 0.005, 1.5]} />
@@ -137,7 +146,7 @@ const PolaroidItem: React.FC<{ data: PhotoData; mode: TreeMode; index: number }>
 
       {/* Frame Group (Offset slightly so string connects to top center) */}
       <group position={[0, 0, 0]}>
-        
+
         {/* White Paper Backing */}
         <mesh position={[0, 0, 0]}>
           <boxGeometry args={[1.2, 1.5, 0.02]} />
@@ -154,11 +163,11 @@ const PolaroidItem: React.FC<{ data: PhotoData; mode: TreeMode; index: number }>
             <meshStandardMaterial color={error ? "#550000" : "#cccccc"} />
           )}
         </mesh>
-        
+
         {/* "Tape" or Gold Clip */}
-        <mesh position={[0, 0.7, 0.025]} rotation={[0,0,0]}>
-           <boxGeometry args={[0.1, 0.05, 0.05]} />
-           <meshStandardMaterial color="#D4AF37" metalness={1} roughness={0.2} />
+        <mesh position={[0, 0.7, 0.025]} rotation={[0, 0, 0]}>
+          <boxGeometry args={[0.1, 0.05, 0.05]} />
+          <meshStandardMaterial color="#D4AF37" metalness={1} roughness={0.2} />
         </mesh>
 
         {/* Text Label */}
@@ -176,7 +185,7 @@ const PolaroidItem: React.FC<{ data: PhotoData; mode: TreeMode; index: number }>
   );
 };
 
-export const Polaroids: React.FC<PolaroidsProps> = ({ mode, uploadedPhotos }) => {
+export const Polaroids: React.FC<PolaroidsProps> = ({ mode, uploadedPhotos, onSelectPhoto }) => {
   const photoData = useMemo(() => {
     // Don't render any photos if none are uploaded
     if (uploadedPhotos.length === 0) {
@@ -186,7 +195,7 @@ export const Polaroids: React.FC<PolaroidsProps> = ({ mode, uploadedPhotos }) =>
     const data: PhotoData[] = [];
     const height = 9; // Range of height on tree
     const maxRadius = 5.0; // Slightly outside the foliage radius (which is approx 5 at bottom)
-    
+
     const count = uploadedPhotos.length;
 
     for (let i = 0; i < count; i++) {
@@ -194,13 +203,13 @@ export const Polaroids: React.FC<PolaroidsProps> = ({ mode, uploadedPhotos }) =>
       // Distributed nicely on the cone surface
       const yNorm = 0.2 + (i / count) * 0.6; // Keep between 20% and 80% height
       const y = yNorm * height;
-      
+
       // Radius decreases as we go up
       const r = maxRadius * (1 - yNorm) + 0.8; // +0.8 to ensure it floats OUTSIDE leaves
-      
+
       // Golden Angle Spiral for even distribution
       const theta = i * 2.39996; // Golden angle in radians
-      
+
       const targetPos = new THREE.Vector3(
         r * Math.cos(theta),
         y,
@@ -212,12 +221,12 @@ export const Polaroids: React.FC<PolaroidsProps> = ({ mode, uploadedPhotos }) =>
       // So relative to scene, camera is at y=9
       const relativeY = 5; // Lower position for better visibility
       const relativeZ = 20; // Camera Z
-      
+
       // Create positions spread widely around camera, very close
       const angle = (i / count) * Math.PI * 2; // Distribute evenly
       const distance = 3 + Math.random() * 4; // Distance 3-7 units (very close)
       const heightSpread = (Math.random() - 0.5) * 8; // Height variation -4 to +4 (more spread)
-      
+
       const chaosPos = new THREE.Vector3(
         distance * Math.cos(angle) * 1.2, // X spread wider
         relativeY + heightSpread, // More vertical spread
@@ -238,7 +247,7 @@ export const Polaroids: React.FC<PolaroidsProps> = ({ mode, uploadedPhotos }) =>
   return (
     <group>
       {photoData.map((data, i) => (
-        <PolaroidItem key={i} index={i} data={data} mode={mode} />
+        <PolaroidItem key={i} index={i} data={data} mode={mode} onSelectPhoto={onSelectPhoto} />
       ))}
     </group>
   );
